@@ -25,6 +25,7 @@ memchr = "2.5.0"
 ouroboros = "0.15.5"
 rand = "0.8"
 rayon = "1.5"
+sysinfo = "0.26.4"
 tempfile = "3"
 unicode-width = "0.1.8"
 uucore = { version=">=0.0.16", package="uucore", path="../../uucore", features=["fs"] }
