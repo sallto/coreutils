@@ -30,6 +30,7 @@ use clap::{crate_version, Arg, Command};
 use custom_str_cmp::custom_str_cmp;
 use ext_sort::ext_sort;
 use fnv::FnvHasher;
+use nix::sys::sysinfo::sysinfo;
 use numeric_str_cmp::{human_numeric_str_cmp, numeric_str_cmp, NumInfo, NumInfoParseSettings};
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
@@ -45,7 +46,6 @@ use std::ops::Range;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::Utf8Error;
-use sysinfo::{RefreshKind, System, SystemExt};
 use unicode_width::UnicodeWidthStr;
 use uucore::display::Quotable;
 use uucore::error::{set_exit_code, strip_errno, UError, UResult, USimpleError, UUsageError};
@@ -363,7 +363,7 @@ impl GlobalSettings {
             Some(_) if size_string.starts_with(|c: char| c.is_ascii_digit()) => {
                 return Err(ParseSizeError::InvalidSuffix("invalid suffix".to_string()))
             }
-            // Catch non-number strings
+            // Catch non-number strings (ex. '%', 'K')
             Some(_) | None => {
                 return Err(ParseSizeError::ParseFailure("parse failure".to_string()))
             }
@@ -409,7 +409,9 @@ impl GlobalSettings {
 /// assert_eq!(parse_memory_percentage("0%"), Ok(0));
 fn parse_memory_percentage(size_string: &str) -> Result<u64, ParseSizeError> {
     // Fetch memory info
-    let system = System::new_with_specifics(RefreshKind::new().with_memory());
+    let system = sysinfo().map_err(|_| {
+        ParseSizeError::ParseFailure("failed to retrieve total system memory".to_string())
+    });
     match size_string[..size_string.len() - 1].parse::<u64>() {
         Ok(percentage) => {
             // Can't allocate more than 100% of memory
@@ -418,7 +420,7 @@ fn parse_memory_percentage(size_string: &str) -> Result<u64, ParseSizeError> {
             }
 
             percentage
-                .checked_mul(system.total_memory())
+                .checked_mul(system?.ram_total())
                 .map(|val| val / 100)
                 // Handle overflow in multiplication
                 .ok_or_else(|| ParseSizeError::SizeTooBig(size_string.to_string()))
@@ -1923,15 +1925,15 @@ mod tests {
 
     #[test]
     fn test_parse_memory_percentages() {
-        let s = System::new_all();
+        let s = sysinfo().unwrap();
         assert_eq!(
             GlobalSettings::parse_byte_count("100%").unwrap(),
-            s.total_memory() as usize
+            s.ram_total() as usize
         );
         assert_eq!(GlobalSettings::parse_byte_count("0%").unwrap(), 0);
         assert_eq!(
             GlobalSettings::parse_byte_count("50%").unwrap(),
-            (s.total_memory() / 2) as usize
+            (s.ram_total() / 2) as usize
         );
     }
     #[test]
