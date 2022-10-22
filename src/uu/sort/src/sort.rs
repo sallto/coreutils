@@ -11,7 +11,7 @@
 // https://pubs.opengroup.org/onlinepubs/9699919799/utilities/sort.html
 // https://www.gnu.org/software/coreutils/manual/html_node/sort-invocation.html
 
-// spell-checker:ignore (misc) HFKJFK Mbdfhn
+// spell-checker:ignore (misc) HFKJFK Mbdfhn sysinfo MEMORYSTATUS MEMSIZE
 
 #[macro_use]
 extern crate uucore;
@@ -415,7 +415,7 @@ fn total_physical_memory() -> Option<u64> {
     use uucore::libc::{c_void, sysctl};
 
     let mut total_memory: MaybeUninit<u64> = MaybeUninit::uninit();
-    // Indices to acess total physical memory: CTL_HW, HW_MEMSIZE
+    // Indices to access total physical memory: CTL_HW, HW_MEMSIZE
     // In a nutshell the correct path for sysctl
     let mut mib: [i32; 2] = [6, 24];
     let mut size = size_of::<u64>();
@@ -431,7 +431,7 @@ fn total_physical_memory() -> Option<u64> {
     };
 
     if result == 0 {
-        // if the syscall was sucessfull this will be initialized.
+        // if the syscall was successful this will be initialized.
         Some(unsafe { total_memory.assume_init() })
     } else {
         None
