@@ -403,7 +403,7 @@ impl GlobalSettings {
             .count();
     }
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 fn total_physical_memory() -> Option<u64> {
     use nix::sys::sysinfo::sysinfo;
     sysinfo().ok().map(|sys| sys.ram_total())
@@ -417,7 +417,7 @@ fn total_physical_memory() -> Option<u64> {
     let mut total_memory: MaybeUninit<u64> = MaybeUninit::uninit();
     // Indices to acess total physical memory: CTL_HW, HW_MEMSIZE
     // In a nutshell the correct path for sysctl
-    let mut mib: [i32; 2] = [6, 5];
+    let mut mib: [i32; 2] = [6, 24];
     let mut size = size_of::<u64>();
     let result = unsafe {
         sysctl(
