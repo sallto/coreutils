@@ -454,19 +454,20 @@ fn parse_memory_percentage(size_string: &str) -> Result<u64, ParseSizeError> {
     let total_memory = total_physical_memory().ok_or_else(|| {
         ParseSizeError::ParseFailure("failed to retrieve total system memory".to_string())
     });
-    match size_string[..size_string.len() - 1].parse::<u64>() {
+    // Parse the percentage as u128 to avoid overflows when multiplying with the memory size.
+    match size_string[..size_string.len() - 1].parse::<u128>() {
         Ok(percentage) => {
             // Can't allocate more than 100% of memory
             if percentage > 100 {
                 return Err(ParseSizeError::SizeTooBig(size_string.to_string()));
             }
 
-            percentage
-                .checked_mul(total_memory?)
-                .map(|val| val / 100)
-                // Handle overflow in multiplication
-                .ok_or_else(|| ParseSizeError::SizeTooBig(size_string.to_string()))
+            let result: u128 = (percentage * total_memory? as u128) / 100;
+            // This is safe since percentage <= 100. Therefore result is at most == total_memory.
+            // Since total_memory is a u64, result must fit in u64 as well.
+            Ok(result as u64)
         }
+
         Err(_) => Err(ParseSizeError::ParseFailure(size_string.to_string())),
     }
 }
